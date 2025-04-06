@@ -71,7 +71,7 @@ const checkPaymentStatusAndSave = async (referenceId, provider, token, phoneNumb
       {
         headers: {
           Authorization: `Bearer ${token}`,
-          'X-Target-Environment': 'sandbox',
+          'X_TARGET_ENVIRONMENT': 'sandbox',
           'Ocp-Apim-Subscription-Key': process.env.MTN_PRIMARY_KEY,
         },
       }
