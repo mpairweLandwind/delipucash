@@ -69,6 +69,8 @@ model AppUser {
   Response Response[]
 
   Comment Comment[]
+
+  Ad Ad[]
 }
 
 model Video {
@@ -85,11 +87,9 @@ model Video {
   comments    Comment[]
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
-   
-  commentsCount Int @default(0)
+  commentsCount Int    @default(0)
   @@index([userId])
 }
-
 
 model Comment {
   id        String   @id @default(auto()) @map("_id") @db.ObjectId
@@ -133,6 +133,29 @@ model UploadSurvey {
   survey      Survey   @relation(fields: [surveyId], references: [id])
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+}
+
+model Ad {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  title       String
+  description String
+  imageUrl    String
+  targetUrl   String?
+  type        String?  @default("regular") // 'regular', 'featured', 'banner'
+  sponsored   Boolean  @default(false)
+  views       Int      @default(0)
+  clicks      Int      @default(0)
+  isActive    Boolean  @default(true)
+  startDate   DateTime?
+  endDate     DateTime?
+  userId      String   @db.ObjectId
+  user        AppUser  @relation(fields: [userId], references: [id])
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([userId])
+  @@index([type])
+  @@index([isActive])
 }
 
 model SurveyResponse {

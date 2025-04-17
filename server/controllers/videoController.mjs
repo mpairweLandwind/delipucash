@@ -35,29 +35,48 @@ export const createVideo = asyncHandler(async (req, res) => {
         likes: 0,
         views: 0,
         isBookmarked: false,
-        comments: undefined, // Fix Prisma validation error
-        createdAt: timestamp ? new Date(timestamp) : undefined, // Use timestamp if available
+        commentsCount: 0,
+        createdAt: timestamp ? new Date(timestamp) : new Date(),
         updatedAt: new Date(),
       },
+      include: {
+        user: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            avatar: true
+          }
+        }
+      }
     });
 
     console.log("Video created successfully:", video);
-    res.status(201).json({ message: "Video created successfully", video });
+    res.status(201).json({ 
+      message: "Video created successfully", 
+      video: {
+        ...video,
+        user: {
+          id: video.user.id,
+          firstName: video.user.firstName,
+          lastName: video.user.lastName,
+          avatar: video.user.avatar
+        }
+      }
+    });
   } catch (error) {
     console.error("Error creating video:", error);
     res.status(500).json({ message: "Something went wrong" });
   }
 });
-// add comment to a video
+
 // Post a Comment on a Video
-// This function handles posting a comment on a video
-// It validates the input, checks if the user and video exist, and then creates the comment
-// It also updates the video's comment count
 export const commentPost = asyncHandler(async (req, res) => {
   try {
     const { id: videoId } = req.params;
     const { text, media, user_id, created_at } = req.body;
-  console.log("Received request data for comment:", req.body);
+    console.log("Received request data for comment:", req.body);
+
     // Validate required fields
     if (!user_id) {
       return res.status(400).json({ message: "User ID is required" });
@@ -100,6 +119,7 @@ export const commentPost = asyncHandler(async (req, res) => {
             id: true,
             firstName: true,
             lastName: true,
+            avatar: true
           },
         },
       },
@@ -119,76 +139,164 @@ export const commentPost = asyncHandler(async (req, res) => {
         mediaUrls: comment.mediaUrls,
         userId: comment.userId,
         videoId: comment.videoId,
-        timestamp: created_at, // Return original timestamp
-        user: comment.user
+        timestamp: comment.createdAt.getTime(),
+        user: {
+          id: comment.user.id,
+          firstName: comment.user.firstName,
+          lastName: comment.user.lastName,
+          avatar: comment.user.avatar
+        }
       },
     });
-console.log("Comment posted successfully:", comment);
+    console.log("Comment posted successfully:", comment);
   } catch (error) {
     console.error("Error posting comment:", error);
     res.status(500).json({ message: "Failed to post comment" });
   }
 });
+
 // Get Videos Uploaded by a User
 export const getVideosByUser = asyncHandler(async (req, res) => {
-  const { userId} = req.params;
+  try {
+    const { userId } = req.params;
 
-  // Fetch videos for the specified user
-  const videos = await prisma.video.findMany({
-    where: { userId: userId },
-  });
+    // Fetch videos for the specified user
+    const videos = await prisma.video.findMany({
+      where: { userId },
+      include: {
+        user: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            avatar: true
+          }
+        }
+      },
+      orderBy: {
+        createdAt: 'desc'
+      }
+    });
 
-  res.json({ message: 'Videos fetched successfully', videos });
+    res.json({ 
+      message: 'Videos fetched successfully', 
+      videos: videos.map(video => ({
+        ...video,
+        user: {
+          id: video.user.id,
+          firstName: video.user.firstName,
+          lastName: video.user.lastName,
+          avatar: video.user.avatar
+        }
+      }))
+    });
+  } catch (error) {
+    console.error('Error fetching user videos:', error);
+    res.status(500).json({ message: 'Failed to fetch videos' });
+  }
 });
 
 // Get All Videos (for Streaming or Browsing)
-export const getAllVideos = asyncHandler(async (_req, res) => {
+export const getAllVideos = asyncHandler(async (req, res) => {
   try {
     const videos = await prisma.video.findMany({
       include: {
         user: {
           select: {
+            id: true,
             firstName: true,
             lastName: true,
+            avatar: true
           },
         },
       },
+      orderBy: {
+        createdAt: 'desc'
+      }
     });
 
-    console.log( 'refetched videos',videos);
+    console.log('Refetched videos', videos);
 
-    res.json({ message: "All videos fetched successfully", videos });
+    res.json({ 
+      message: "All videos fetched successfully", 
+      videos: videos.map(video => ({
+        ...video,
+        user: {
+          id: video.user.id,
+          firstName: video.user.firstName,
+          lastName: video.user.lastName,
+          avatar: video.user.avatar
+        }
+      }))
+    });
   } catch (error) {
     console.error("Error fetching videos:", error);
     res.status(500).json({ message: "Failed to fetch videos" });
   }
 });
 
-
 // Update Video Information
 export const updateVideo = asyncHandler(async (req, res) => {
-  const { id } = req.params;
-  const { title, description, videoUrl } = req.body;
+  try {
+    const { id } = req.params;
+    const { title, description, videoUrl } = req.body;
 
-  const updatedVideo = await prisma.video.update({
-    where: { id },
-    data: { title, description, videoUrl },
-  });
+    const updatedVideo = await prisma.video.update({
+      where: { id },
+      data: { title, description, videoUrl },
+      include: {
+        user: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            avatar: true
+          }
+        }
+      }
+    });
 
-  res.json({ message: 'Video updated successfully', updatedVideo });
+    res.json({ 
+      message: 'Video updated successfully', 
+      video: {
+        ...updatedVideo,
+        user: {
+          id: updatedVideo.user.id,
+          firstName: updatedVideo.user.firstName,
+          lastName: updatedVideo.user.lastName,
+          avatar: updatedVideo.user.avatar
+        }
+      }
+    });
+  } catch (error) {
+    console.error('Error updating video:', error);
+    res.status(500).json({ message: 'Failed to update video' });
+  }
 });
 
 // Delete a Video
 export const deleteVideo = asyncHandler(async (req, res) => {
-  const { id } = req.params;
+  try {
+    const { id } = req.params;
 
-  await prisma.video.delete({
-    where: { id },
-  });
+    // First delete all comments associated with the video
+    await prisma.comment.deleteMany({
+      where: { videoId: id },
+    });
 
-  res.json({ message: 'Video deleted successfully' });
+    // Then delete the video
+    await prisma.video.delete({
+      where: { id },
+    });
+
+    res.json({ message: 'Video deleted successfully' });
+  } catch (error) {
+    console.error('Error deleting video:', error);
+    res.status(500).json({ message: 'Failed to delete video' });
+  }
 });
-  // Like a Video (Increment Likes)
+
+// Like a Video (Increment Likes)
 export const likeVideo = asyncHandler(async (req, res) => {
   try {
     const { id } = req.params;
@@ -210,15 +318,139 @@ export const likeVideo = asyncHandler(async (req, res) => {
           increment: 1,
         },
       },
+      include: {
+        user: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            avatar: true
+          }
+        }
+      }
     });
 
     res.json({ 
       message: 'Video liked successfully', 
-      video: updatedVideo 
+      video: {
+        ...updatedVideo,
+        user: {
+          id: updatedVideo.user.id,
+          firstName: updatedVideo.user.firstName,
+          lastName: updatedVideo.user.lastName,
+          avatar: updatedVideo.user.avatar
+        }
+      }
     });
-
   } catch (error) {
     console.error('Error liking video:', error);
+    res.status(500).json({ message: 'Something went wrong' });
+  }
+});
+
+// Bookmark a Video
+export const bookmarkVideo = asyncHandler(async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { userId } = req.body;
+
+    if (!userId) {
+      return res.status(400).json({ message: 'User ID is required' });
+    }
+
+    // Check if video exists
+    const video = await prisma.video.findUnique({
+      where: { id },
+    });
+
+    if (!video) {
+      return res.status(404).json({ message: 'Video not found' });
+    }
+
+    // Toggle bookmark status
+    const updatedVideo = await prisma.video.update({
+      where: { id },
+      data: {
+        isBookmarked: !video.isBookmarked,
+      },
+      include: {
+        user: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            avatar: true
+          }
+        }
+      }
+    });
+
+    res.json({ 
+      message: 'Video bookmark toggled successfully', 
+      video: {
+        ...updatedVideo,
+        user: {
+          id: updatedVideo.user.id,
+          firstName: updatedVideo.user.firstName,
+          lastName: updatedVideo.user.lastName,
+          avatar: updatedVideo.user.avatar
+        }
+      }
+    });
+  } catch (error) {
+    console.error('Error bookmarking video:', error);
+    res.status(500).json({ message: 'Something went wrong' });
+  }
+});
+
+// Increment Video Views
+export const incrementVideoViews = asyncHandler(async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    // Check if video exists
+    const video = await prisma.video.findUnique({
+      where: { id },
+    });
+
+    if (!video) {
+      return res.status(404).json({ message: 'Video not found' });
+    }
+
+    // Atomically increment views count
+    const updatedVideo = await prisma.video.update({
+      where: { id },
+      data: {
+        views: {
+          increment: 1,
+        },
+      },
+      include: {
+        user: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            avatar: true
+          }
+        }
+      }
+    });
+
+    res.json({ 
+      message: 'Video view incremented successfully', 
+      video: {
+        ...updatedVideo,
+        user: {
+          id: updatedVideo.user.id,
+          firstName: updatedVideo.user.firstName,
+          lastName: updatedVideo.user.lastName,
+          avatar: updatedVideo.user.avatar
+        }
+      }
+    });
+  } catch (error) {
+    console.error('Error incrementing video views:', error);
     res.status(500).json({ message: 'Something went wrong' });
   }
 });

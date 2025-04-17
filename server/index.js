@@ -12,6 +12,7 @@ import questionAttemptRoutes from './routes/questionAttemptRoutes.mjs';
 import questionRoutes from './routes/questionRoutes.mjs';
 import surveyRoutes from './routes/surveyRoutes.mjs';
 import videoRoutes from './routes/videoRoutes.mjs';
+import AdRoutes from './routes/AdRoutes.mjs';
 
 
 dotenv.config();
@@ -54,6 +55,7 @@ app.use('/api/surveys', surveyRoutes);
 app.use('/api/payments', paymentRoutes);
 app.use('/api/videos', videoRoutes);
 app.use('/api/auth', authRouter);
+app.use('/api/ads', AdRoutes);
 
 
 
