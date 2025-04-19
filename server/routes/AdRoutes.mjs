@@ -1,8 +1,7 @@
 import express from 'express';
 import {
-  createAd,
   getAllAds,
-  getAdsByUser,
+  createAd,
   updateAd,
   deleteAd,
   trackAdView,
@@ -11,25 +10,22 @@ import {
 
 const router = express.Router();
 
-// Create a new ad
-router.post('/create', createAd);
-
-// Get all active ads
+// Get all ads (matches frontend: GET /ads/all)
 router.get('/all', getAllAds);
 
-// Get ads by user
-router.get('/user/:userId', getAdsByUser);
+// Create a new ad (matches frontend: POST /ads/create)
+router.post('/create', createAd);
 
-// Update an ad
-router.put('/update/:id', updateAd);
+// Update an ad (matches frontend: PUT /ads/:adId/update)
+router.put('/:adId/update', updateAd);
 
-// Delete an ad
-router.delete('/delete/:id', deleteAd);
+// Delete an ad (matches frontend: DELETE /ads/:adId/delete)
+router.delete('/:adId/delete', deleteAd);
 
-// Track ad view
-router.post('/:id/view', trackAdView);
+// Track ad view (matches frontend: POST /ads/:adId/view)
+router.post('/:adId/view', trackAdView);
 
-// Track ad click
-router.post('/:id/click', trackAdClick);
+// Track ad click (matches frontend: POST /ads/:adId/click)
+router.post('/:adId/click', trackAdClick);
 
 export default router;

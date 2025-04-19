@@ -3,57 +3,84 @@ import asyncHandler from 'express-async-handler';
 
 // Create a new ad
 export const createAd = asyncHandler(async (req, res) => {
-  try {
-    const { 
-      title,
-      description,
-      imageUrl,
-      targetUrl,
-      type = 'regular',
-      sponsored = false,
-      isActive = true,
-      startDate,
-      endDate,
-      userId
-    } = req.body;
-
-    // Validate required fields
-    if (!title || !description || !imageUrl || !targetUrl || !userId) {
-      return res.status(400).json({ 
-        message: "Title, description, imageUrl, targetUrl and userId are required" 
-      });
-    }
-
-    // Validate ad type
-    const validTypes = ['regular', 'featured', 'banner'];
-    if (type && !validTypes.includes(type)) {
-      return res.status(400).json({ 
-        message: "Invalid ad type. Must be 'regular', 'featured', or 'banner'" 
-      });
-    }
-
-    // Create the ad
-    const ad = await prisma.ad.create({
-      data: {
+    try {
+      const { 
         title,
         description,
         imageUrl,
+        videoUrl,
+        thumbnailUrl,
         targetUrl,
-        type,
-        sponsored,
-        isActive,
-        startDate: startDate ? new Date(startDate) : null,
-        endDate: endDate ? new Date(endDate) : null,
-        userId
+        type = "regular",
+        sponsored = false,
+        views = 0,
+        clicks = 0,
+        isActive = true,
+        startDate,
+        endDate,
+        userId,
+        priority = 0,
+        frequency,
+        lastShown
+      } = req.body;
+  
+      console.log("Creating ad with data:", req.body);
+  
+      // Validate required fields
+      if (!title || !description || !userId) {
+        return res.status(400).json({ 
+          message: "Title, description and userId are required" 
+        });
       }
-    });
-
-    res.status(201).json(ad);
-  } catch (error) {
-    console.error("Error creating ad:", error);
-    res.status(500).json({ message: "Something went wrong" });
-  }
-});
+  
+      // Validate that either imageUrl or videoUrl is provided
+      if (!imageUrl && !videoUrl) {
+        return res.status(400).json({
+          message: "Either imageUrl or videoUrl must be provided"
+        });
+      }
+  
+      // Validate ad type
+      const validTypes = ['regular', 'featured', 'banner', 'compact'];
+      if (type && !validTypes.includes(type)) {
+        return res.status(400).json({ 
+          message: `Invalid ad type. Must be one of: ${validTypes.join(', ')}` 
+        });
+      }
+  
+      // Create the ad
+      const ad = await prisma.ad.create({
+        data: {
+          title,
+          description,
+          imageUrl,
+          videoUrl,
+          thumbnailUrl,
+          targetUrl,
+          type,
+          sponsored,
+          views,
+          clicks,
+          isActive,
+          startDate: startDate ? new Date(startDate) : null,
+          endDate: endDate ? new Date(endDate) : null,
+          userId,
+          priority,
+          frequency,
+          lastShown: lastShown ? new Date(lastShown) : null,
+          createdAt: new Date(),
+          updatedAt: new Date()
+        }
+      });
+  
+      res.status(201).json(ad);
+      console.log("Ad created:", ad);
+  
+    } catch (error) {
+      console.error("Error creating ad:", error);
+      res.status(500).json({ message: "Something went wrong" });
+    }
+  });
 
 // Get all ads
 export const getAllAds = asyncHandler(async (req, res) => {
@@ -61,19 +88,46 @@ export const getAllAds = asyncHandler(async (req, res) => {
     const ads = await prisma.ad.findMany({
       where: { isActive: true },
       orderBy: { createdAt: 'desc' },
-      include: { user: { select: { firstName: true, lastName: true } } }
+       include: { user: { select: { firstName: true, lastName: true } } }
     });
+// Format the data to match frontend expectations
+const formattedAds = ads.map(ad => ({
+    id: ad.id,
+    title: ad.title,
+    description: ad.description,
+    imageUrl: ad.imageUrl,
+    videoUrl: ad.videoUrl,
+    thumbnailUrl: ad.thumbnailUrl,
+    targetUrl: ad.targetUrl,
+    type: ad.type,
+    sponsored: ad.sponsored,
+    views: ad.views,
+    clicks: ad.clicks,
+    isActive: ad.isActive,
+    startDate: ad.startDate?.toISOString(),
+    endDate: ad.endDate?.toISOString(),
+    createdAt: ad.createdAt.getTime(), // Convert to timestamp
+    updatedAt: ad.updatedAt.getTime(), // Convert to timestamp
+    userId: ad.userId,
+    user: ad.user
+  }));
+
 
     // Separate ads by type
-    const featuredAd = ads.find(ad => ad.type === 'featured');
-    const bannerAd = ads.find(ad => ad.type === 'banner');
-    const regularAds = ads.filter(ad => ad.type === 'regular' || !ad.type);
-
+  // Separate ads by type
+  const featuredAd = formattedAds.find(ad => ad.type === 'featured') || null;
+  const bannerAd = formattedAds.find(ad => ad.type === 'banner') || null;
+  const regularAds = formattedAds.filter(ad => ad.type === 'regular' || !ad.type ) || null;
+    console.log("Featured ad:", featuredAd);
+    console.log("Banner ad:", bannerAd);
+   
     res.json({
       ads: regularAds,
       featuredAd: featuredAd || null,
       bannerAd: bannerAd || null
     });
+
+    console.log("Fetched ads:", ads);
   } catch (error) {
     console.error("Error fetching ads:", error);
     res.status(500).json({ message: "Something went wrong" });
@@ -117,6 +171,7 @@ export const updateAd = asyncHandler(async (req, res) => {
     });
 
     res.json(updatedAd);
+    console.log("Ad updated:", updatedAd);
   } catch (error) {
     console.error("Error updating ad:", error);
     res.status(500).json({ message: "Something went wrong" });
@@ -133,6 +188,7 @@ export const deleteAd = asyncHandler(async (req, res) => {
     });
 
     res.json({ message: "Ad deleted successfully" });
+    console.log("Ad deleted:", id);
   } catch (error) {
     console.error("Error deleting ad:", error);
     res.status(500).json({ message: "Something went wrong" });
@@ -150,6 +206,7 @@ export const trackAdView = asyncHandler(async (req, res) => {
     });
 
     res.json({ message: "View tracked", views: ad.views });
+    console.log("Ad viewed:", ad);
   } catch (error) {
     console.error("Error tracking ad view:", error);
     res.status(500).json({ message: "Something went wrong" });
@@ -167,6 +224,7 @@ export const trackAdClick = asyncHandler(async (req, res) => {
     });
 
     res.json({ message: "Click tracked", clicks: ad.clicks });
+    console.log("Ad clicked:", ad);
   } catch (error) {
     console.error("Error tracking ad click:", error);
     res.status(500).json({ message: "Something went wrong" });
