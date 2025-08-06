@@ -14,6 +14,8 @@ import surveyRoutes from './routes/surveyRoutes.mjs';
 import videoRoutes from './routes/videoRoutes.mjs';
 import AdRoutes from './routes/AdRoutes.mjs';
 import exploreRoutes from './routes/exploreRoutes.mjs';
+import rewardQuestionRoutes from './routes/rewardQuestionRoutes.mjs';
+import notificationRoutes from './routes/notificationRoutes.mjs';
 
 
 dotenv.config();
@@ -58,7 +60,8 @@ app.use('/api/videos', videoRoutes);
 app.use('/api/auth', authRouter);
 app.use('/api/ads', AdRoutes);
 app.use('/api/explore', exploreRoutes);
-
+app.use('/api/reward-questions', rewardQuestionRoutes);
+app.use('/api', notificationRoutes);
 
 
 

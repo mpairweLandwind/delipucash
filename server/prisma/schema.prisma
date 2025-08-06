@@ -46,6 +46,10 @@ model AppUser {
   subscriptionStatus SubscriptionStatus @default(INACTIVE) 
   surveysubscriptionStatus SubscriptionStatus @default(INACTIVE) 
   currentSubscriptionId String? @db.ObjectId // Tracks the active subscription (if any)
+  
+  // Privacy settings
+  privacySettings Json? // Store privacy settings as JSON
+  
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
@@ -56,7 +60,8 @@ model AppUser {
   rewards     Reward[]
   payments    Payment[]
   questions   Question[]
-
+  rewardQuestions RewardQuestion[]
+  notifications Notification[]
 
   UploadQuestionQuestion UploadQuestion[]
 
@@ -170,7 +175,7 @@ model SurveyResponse {
   userId      String   @db.ObjectId // User who submitted the response
   surveyId    String   @db.ObjectId // Survey this response belongs to
   responses   String   // Store responses as a JSON string
-  user        AppUser  @relation(fields: [userId], references: [id])
+  user        AppUser?  @relation(fields: [userId], references: [id])
   survey      Survey   @relation(fields: [surveyId], references: [id])
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
@@ -183,11 +188,20 @@ model RewardQuestion {
   text          String
   options       Json     // Structured options as JSON
   correctAnswer String   // Correct option/answer ID or value
+  rewardAmount  Int      @default(0) // Amount to be rewarded for answering this question
+  expiryTime    DateTime? // When this reward question expires
+  isActive      Boolean  @default(true) // Whether this reward question is active
+  userId        String   @db.ObjectId // User who created this reward question
+  user          AppUser?  @relation(fields: [userId], references: [id])
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
   // Relations
   attempts      RewardQuestionOnAttempt[]
+
+  @@index([userId])
+  @@index([isActive])
+  @@index([expiryTime])
 }
 
 model RewardQuestionOnAttempt {
@@ -203,8 +217,8 @@ model RewardQuestionOnAttempt {
 model Question {
   id            String   @id @default(auto()) @map("_id") @db.ObjectId
   text          String
-  userId    String   @db.ObjectId // Ensure this matches the ID type in AppUser
-  user      AppUser  @relation(fields: [userId], references: [id])
+  userId    String?   @db.ObjectId // Ensure this matches the ID type in AppUser
+  user      AppUser?  @relation(fields: [userId], references: [id])
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
   responses     Response[]
@@ -285,4 +299,75 @@ model Payment {
   user        AppUser  @relation(fields: [userId], references: [id])
 
   @@index([userId, status]) 
+}
+
+// Notification types for different scenarios
+enum NotificationType {
+  PAYMENT_SUCCESS
+  PAYMENT_FAILED
+  PAYMENT_PENDING
+  REWARD_EARNED
+  REWARD_REDEEMED
+  SURVEY_COMPLETED
+  SURVEY_EXPIRING
+  SUBSCRIPTION_ACTIVE
+  SUBSCRIPTION_EXPIRED
+  SECURITY_ALERT
+  SYSTEM_UPDATE
+  PROMOTIONAL
+  ACHIEVEMENT
+  REFERRAL_BONUS
+  WELCOME
+}
+
+// Notification priority levels
+enum NotificationPriority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+
+model Notification {
+  id          String             @id @default(auto()) @map("_id") @db.ObjectId
+  userId      String             @db.ObjectId
+  user        AppUser            @relation(fields: [userId], references: [id])
+  
+  // Core notification data
+  title       String
+  body        String
+  type        NotificationType
+  priority    NotificationPriority @default(MEDIUM)
+  
+  // Rich content for enhanced UX
+  icon        String?            // Icon name or URL
+  imageUrl    String?            // Optional image for rich notifications
+  actionUrl   String?            // Deep link or action URL
+  actionText  String?            // Call-to-action button text
+  
+  // Metadata
+  metadata    Json?              // Additional data (amount, transaction ID, etc.)
+  category    String?            // Grouping notifications (payments, rewards, etc.)
+  
+  // Status tracking
+  read        Boolean            @default(false)
+  readAt      DateTime?
+  archived    Boolean            @default(false)
+  archivedAt  DateTime?
+  
+  // Delivery tracking
+  delivered   Boolean            @default(false)
+  deliveredAt DateTime?
+  
+  // Expiration
+  expiresAt   DateTime?
+  
+  // Timestamps
+  createdAt   DateTime           @default(now())
+  updatedAt   DateTime           @updatedAt
+
+  @@index([userId, read, createdAt])
+  @@index([userId, type])
+  @@index([userId, priority])
+  @@index([expiresAt])
 }

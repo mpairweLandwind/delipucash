@@ -230,3 +230,67 @@ export const trackAdClick = asyncHandler(async (req, res) => {
     res.status(500).json({ message: "Something went wrong" });
   }
 });
+
+// Track ad interaction (comprehensive tracking)
+export const trackAdInteraction = asyncHandler(async (req, res) => {
+  try {
+    const { adId } = req.params;
+    const { 
+      position, 
+      index, 
+      action, 
+      timestamp, 
+      userId, 
+      sessionId, 
+      deviceInfo, 
+      additionalData 
+    } = req.body;
+
+    console.log("Tracking ad interaction:", {
+      adId,
+      position,
+      index,
+      action,
+      userId,
+      deviceInfo
+    });
+
+    // Update the ad based on action type
+    let updateData = {};
+    if (action === 'view') {
+      updateData = { views: { increment: 1 } };
+    } else if (action === 'click') {
+      updateData = { clicks: { increment: 1 } };
+    } else if (action === 'impression') {
+      // For impressions, we might want to track differently
+      updateData = { views: { increment: 1 } };
+    }
+
+    // Update the ad
+    const ad = await prisma.ad.update({
+      where: { id: adId },
+      data: updateData
+    });
+
+    // Log the interaction for analytics
+    console.log(`Ad ${action} tracked for ad: ${adId} at position: ${position}`);
+
+    res.json({ 
+      success: true,
+      message: `${action} tracked successfully`,
+      adId,
+      action,
+      position,
+      views: ad.views,
+      clicks: ad.clicks
+    });
+
+  } catch (error) {
+    console.error("Error tracking ad interaction:", error);
+    res.status(500).json({ 
+      success: false,
+      message: "Failed to track ad interaction",
+      error: error.message 
+    });
+  }
+});

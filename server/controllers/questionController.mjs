@@ -45,6 +45,8 @@ export const createQuestion = asyncHandler(async (req, res) => {
   }
 });
 
+
+
 // Get All Questions
 // Get Most Recent 10 Questions
 export const getQuestions = asyncHandler(async (_req, res) => {
@@ -57,8 +59,16 @@ export const getQuestions = asyncHandler(async (_req, res) => {
         userId: true,      // Include the user ID
         createdAt: true,   // Include the creation timestamp
         updatedAt: true,   // Include the update timestamp
+
         responses: true,   // Include associated responses
         attempts: true,    // Include associated attempts
+        user: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+          }
+        }
       },
       orderBy: {
         createdAt: 'desc', // Sort by createdAt in descending order

@@ -144,3 +144,56 @@ export const updateSubscriptionStatus = async (req, res) => {
     res.status(500).json({ error: "Failed to update subscription status." });
   }
 };
+
+// Get privacy settings
+export const getPrivacySettings = asyncHandler(async (req, res) => {
+  const userId = req.user.id; // From JWT token
+
+  try {
+    const user = await prisma.appUser.findUnique({
+      where: { id: userId },
+      select: {
+        privacySettings: true
+      }
+    });
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    // Return default privacy settings if none exist
+    const defaultSettings = {
+      profileVisibility: 'public',
+      showActivity: true,
+      allowMessages: true,
+      showEmail: false,
+      showPhone: false
+    };
+
+    res.json(user.privacySettings || defaultSettings);
+  } catch (error) {
+    console.error("Error fetching privacy settings:", error);
+    res.status(500).json({ error: "Failed to fetch privacy settings" });
+  }
+});
+
+// Update privacy settings
+export const updatePrivacySettings = asyncHandler(async (req, res) => {
+  const userId = req.user.id; // From JWT token
+  const privacySettings = req.body;
+
+  try {
+    const updatedUser = await prisma.appUser.update({
+      where: { id: userId },
+      data: { privacySettings },
+    });
+
+    res.json({
+      message: "Privacy settings updated successfully",
+      privacySettings: updatedUser.privacySettings
+    });
+  } catch (error) {
+    console.error("Error updating privacy settings:", error);
+    res.status(500).json({ error: "Failed to update privacy settings" });
+  }
+});

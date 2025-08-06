@@ -8,6 +8,8 @@ router.post('/create', createQuestion);
 
 
 
+
+
 // Route to get all questions
 router.get('/all', getQuestions);
 

@@ -199,6 +199,8 @@ export const getVideosByUser = asyncHandler(async (req, res) => {
 // Get All Videos (for Streaming or Browsing)
 export const getAllVideos = asyncHandler(async (req, res) => {
   try {
+    console.log('VideoController: getAllVideos - Starting to fetch videos from database')
+    
     const videos = await prisma.video.findMany({
       include: {
         user: {
@@ -215,22 +217,67 @@ export const getAllVideos = asyncHandler(async (req, res) => {
       }
     });
 
-    console.log('Refetched videos', videos);
+    console.log('VideoController: getAllVideos - Database query completed:', {
+      videosCount: videos.length,
+      videos: videos.slice(0, 2).map(v => ({
+        id: v.id,
+        title: v.title,
+        hasVideoUrl: !!v.videoUrl,
+        hasThumbnail: !!v.thumbnail,
+        userId: v.userId,
+        hasUser: !!v.user,
+        videoUrl: v.videoUrl?.substring(0, 50) + '...',
+        thumbnail: v.thumbnail?.substring(0, 50) + '...'
+      }))
+    });
+
+    const formattedVideos = videos.map(video => {
+      const formattedVideo = {
+        id: video.id,
+        title: video.title || 'Untitled Video',
+        description: video.description || '',
+        videoUrl: video.videoUrl,
+        thumbnail: video.thumbnail,
+        userId: video.userId,
+        likes: video.likes || 0,
+        views: video.views || 0,
+        isBookmarked: video.isBookmarked || false,
+        commentsCount: video.commentsCount || 0,
+        createdAt: video.createdAt.getTime(),
+        updatedAt: video.updatedAt.getTime(),
+        timestamp: video.createdAt.getTime(),
+        duration: 0, // Default duration
+        comments: [], // Empty comments array
+        user: video.user ? {
+          id: video.user.id,
+          firstName: video.user.firstName || 'Anonymous',
+          lastName: video.user.lastName || '',
+          avatar: video.user.avatar
+        } : null
+      }
+      
+      console.log('VideoController: Formatted video:', {
+        id: formattedVideo.id,
+        title: formattedVideo.title,
+        hasVideoUrl: !!formattedVideo.videoUrl,
+        hasThumbnail: !!formattedVideo.thumbnail,
+        hasUser: !!formattedVideo.user
+      })
+      
+      return formattedVideo
+    })
+
+    console.log('VideoController: getAllVideos - Sending response:', {
+      videosCount: formattedVideos.length,
+      message: "All videos fetched successfully"
+    })
 
     res.json({ 
       message: "All videos fetched successfully", 
-      videos: videos.map(video => ({
-        ...video,
-        user: {
-          id: video.user.id,
-          firstName: video.user.firstName,
-          lastName: video.user.lastName,
-          avatar: video.user.avatar
-        }
-      }))
+      videos: formattedVideos
     });
   } catch (error) {
-    console.error("Error fetching videos:", error);
+    console.error("VideoController: getAllVideos - Error occurred:", error);
     res.status(500).json({ message: "Failed to fetch videos" });
   }
 });

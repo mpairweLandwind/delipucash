@@ -90,6 +90,47 @@ export const updateUserPoints = asyncHandler(async (req, res, next) => {
 // signin code
 
 // Fetch user points
+// Change password endpoint
+export const changePassword = asyncHandler(async (req, res, next) => {
+  const { currentPassword, newPassword } = req.body;
+  const userId = req.user.id; // From JWT token
+
+  try {
+    // Find the user
+    const user = await prisma.appUser.findUnique({
+      where: { id: userId },
+      select: { password: true }
+    });
+
+    if (!user) {
+      return next(errorHandler(404, "User not found"));
+    }
+
+    // Verify current password
+    const isCurrentPasswordValid = await bcrypt.compare(currentPassword, user.password);
+    if (!isCurrentPasswordValid) {
+      return next(errorHandler(400, "Current password is incorrect"));
+    }
+
+    // Hash the new password
+    const hashedNewPassword = await bcrypt.hash(newPassword, 10);
+
+    // Update the password
+    await prisma.appUser.update({
+      where: { id: userId },
+      data: { password: hashedNewPassword }
+    });
+
+    res.status(200).json({
+      success: true,
+      message: "Password changed successfully"
+    });
+  } catch (error) {
+    console.error("Failed to change password:", error);
+    next(errorHandler(500, "Failed to change password"));
+  }
+});
+
 export const getUserPoints = async (req, res, next) => {
   const { userId } = req.params;
 
@@ -294,5 +335,33 @@ export const checkSurveySubscriptionStatus = asyncHandler(async (req, res) => {
   } catch (error) {
     console.error("Error checking survey subscription status:", error);
     res.status(500).json({ error: "Failed to check  survey subscription status." });
+  }
+});
+
+// Get Rewards for User by User ID
+export const getRewardsByUserId = asyncHandler(async (req, res) => {
+  const { userId } = req.params;
+
+  try {
+    // First, get the user to find their phone number
+    const user = await prisma.appUser.findUnique({
+      where: { id: userId },
+      select: { phone: true },
+    });
+
+    if (!user) {
+      return res.status(404).json({ error: "User not found." });
+    }
+
+    // Then get rewards for that phone number
+    const rewards = await prisma.reward.findMany({
+      where: { userPhoneNumber: user.phone },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    res.json(rewards);
+  } catch (error) {
+    console.error("Error fetching rewards for user:", error);
+    res.status(500).json({ error: "Failed to fetch rewards." });
   }
 });

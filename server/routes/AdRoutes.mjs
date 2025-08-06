@@ -5,7 +5,8 @@ import {
   updateAd,
   deleteAd,
   trackAdView,
-  trackAdClick
+  trackAdClick,
+  trackAdInteraction
 } from '../controllers/AdController.mjs';
 
 const router = express.Router();
@@ -27,5 +28,8 @@ router.post('/:adId/view', trackAdView);
 
 // Track ad click (matches frontend: POST /ads/:adId/click)
 router.post('/:adId/click', trackAdClick);
+
+// Track ad interaction (matches frontend: POST /ads/:adId/interaction)
+router.post('/:adId/interaction', trackAdInteraction);
 
 export default router;
