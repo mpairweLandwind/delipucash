@@ -16,6 +16,7 @@ import AdRoutes from './routes/AdRoutes.mjs';
 import exploreRoutes from './routes/exploreRoutes.mjs';
 import rewardQuestionRoutes from './routes/rewardQuestionRoutes.mjs';
 import notificationRoutes from './routes/notificationRoutes.mjs';
+import userRoutes from './routes/userRoutes.mjs';
 
 
 dotenv.config();
@@ -62,6 +63,7 @@ app.use('/api/ads', AdRoutes);
 app.use('/api/explore', exploreRoutes);
 app.use('/api/reward-questions', rewardQuestionRoutes);
 app.use('/api', notificationRoutes);
+app.use('/api/users', userRoutes);
 
 
 

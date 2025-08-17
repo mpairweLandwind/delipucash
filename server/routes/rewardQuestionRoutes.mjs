@@ -2,6 +2,7 @@ import express from 'express';
 import {
   createRewardQuestion,
   getAllRewardQuestions,
+  getInstantRewardQuestions,
   getRewardQuestionsByUser,
   updateRewardQuestion,
   deleteRewardQuestion,
@@ -15,6 +16,9 @@ router.post('/create', createRewardQuestion);
 
 // Get all active reward questions (matches frontend: GET /reward-questions/all)
 router.get('/all', getAllRewardQuestions);
+
+// Get instant reward questions only (matches frontend: GET /reward-questions/instant)
+router.get('/instant', getInstantRewardQuestions);
 
 // Get reward questions by user (matches frontend: GET /reward-questions/user/:userId)
 router.get('/user/:userId', getRewardQuestionsByUser);

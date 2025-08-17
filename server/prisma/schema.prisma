@@ -62,6 +62,8 @@ model AppUser {
   questions   Question[]
   rewardQuestions RewardQuestion[]
   notifications Notification[]
+  loginSessions LoginSession[]
+  instantRewardWinners InstantRewardWinner[]
 
   UploadQuestionQuestion UploadQuestion[]
 
@@ -195,13 +197,24 @@ model RewardQuestion {
   user          AppUser?  @relation(fields: [userId], references: [id])
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
+  
+  // New fields for instant reward functionality
+  isInstantReward Boolean @default(false) // Whether this is an instant reward question
+  maxWinners      Int     @default(2) // Maximum number of winners (default 2)
+  winnersCount    Int     @default(0) // Current number of winners
+  isCompleted     Boolean @default(false) // Whether the question is completed (all winners found)
+  paymentProvider String? // MTN or AIRTEL for automatic disbursement
+  phoneNumber     String? // Phone number for automatic disbursement
 
   // Relations
   attempts      RewardQuestionOnAttempt[]
+  winners       InstantRewardWinner[]
 
   @@index([userId])
   @@index([isActive])
   @@index([expiryTime])
+  @@index([isInstantReward])
+  @@index([isCompleted])
 }
 
 model RewardQuestionOnAttempt {
@@ -212,6 +225,28 @@ model RewardQuestionOnAttempt {
   questionAttempt   QuestionAttempt  @relation(fields: [questionAttemptId], references: [id])
 
   @@index([rewardQuestionId, questionAttemptId])
+}
+
+model InstantRewardWinner {
+  id                String        @id @default(auto()) @map("_id") @db.ObjectId
+  rewardQuestionId  String        @db.ObjectId
+  rewardQuestion    RewardQuestion @relation(fields: [rewardQuestionId], references: [id])
+  userEmail         String
+  user              AppUser       @relation(fields: [userEmail], references: [email])
+  position          Int           // 1st, 2nd, etc.
+  amountAwarded     Int           // Amount awarded to this winner
+  paymentStatus     PaymentStatus @default(PENDING)
+  paymentReference  String?       // Payment reference from provider
+  paymentProvider   String?       // MTN or AIRTEL
+  phoneNumber       String?       // Winner's phone number
+  paidAt            DateTime?     // When payment was processed
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+
+  @@index([rewardQuestionId])
+  @@index([userEmail])
+  @@index([paymentStatus])
+  @@unique([rewardQuestionId, userEmail]) // One winner per user per question
 }
 
 model Question {
@@ -370,4 +405,25 @@ model Notification {
   @@index([userId, type])
   @@index([userId, priority])
   @@index([expiresAt])
+}
+
+model LoginSession {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId      String   @db.ObjectId
+  user        AppUser  @relation(fields: [userId], references: [id])
+  deviceInfo  Json?    // Store device information as JSON
+  ipAddress   String?
+  userAgent   String?
+  location    String?
+  isActive    Boolean  @default(true)
+  lastActivity DateTime @default(now())
+  loginTime   DateTime @default(now())
+  logoutTime  DateTime?
+  sessionToken String? // JWT token for this session
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([userId])
+  @@index([isActive])
+  @@index([sessionToken])
 }
